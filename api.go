@@ -1,7 +1,6 @@
 package restitude
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,14 +13,13 @@ const MatchingResourceNotFound = "No resource found matching the given request."
 
 var requestMethods = []string{"DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"}
 
-func serializeToResponse(w *http.ResponseWriter, v interface{}) []byte {
-	jsonData, err := json.Marshal(v)
+type restApiHandlerStore map[string]func(r *http.Request) (interface{}, error)
 
-	if err != nil {
-		log.Print(err)
-	}
-
-	return jsonData
+type restApi struct {
+	prefix              string
+	itemResources       map[string]restApiHandlerStore
+	collectionResources map[string]restApiHandlerStore
+	serializers         map[string]restSerializer
 }
 
 type CollectionResponse struct {
@@ -30,13 +28,6 @@ type CollectionResponse struct {
 
 type ErrorResponse struct {
 	Message string
-}
-type restApiHandlerStore map[string]func(r *http.Request) (interface{}, error)
-
-type restApi struct {
-	prefix              string
-	itemResources       map[string]restApiHandlerStore
-	collectionResources map[string]restApiHandlerStore
 }
 
 // Get the API base name for the given resource
@@ -51,6 +42,29 @@ func getBaseName(iface interface{}) string {
 		typeName = typeName[:len(typeName)-8]
 	}
 	return strings.ToLower(typeName)
+}
+
+func NewRestApi(prefix string) *restApi {
+	log.Print("Creating new REST API at ", prefix)
+
+	itemResources := make(map[string]restApiHandlerStore)
+	collectionResources := make(map[string]restApiHandlerStore)
+
+	for _, method := range requestMethods {
+		itemResources[method] = make(restApiHandlerStore)
+		collectionResources[method] = make(restApiHandlerStore)
+	}
+
+	api := &restApi{
+		prefix:              prefix,
+		itemResources:       itemResources,
+		collectionResources: collectionResources,
+		serializers:         getDefaultSerializers(),
+	}
+
+	http.HandleFunc(api.prefix, api.onRequestReceived)
+
+	return api
 }
 
 // Allows registering of resources to specific APIs
@@ -127,26 +141,20 @@ func (api *restApi) handleCollection(baseName string, r *http.Request) (interfac
 
 	return nil, errors.New(MatchingResourceNotFound)
 }
-func NewRestApi(prefix string) *restApi {
-	log.Print("Creating new REST API at ", prefix)
 
-	itemResources := make(map[string]restApiHandlerStore)
-	collectionResources := make(map[string]restApiHandlerStore)
+func (api *restApi) getResponseSerializer(r *http.Request) restSerializer {
+	accept := r.Header.Get("Accept")
 
-	for _, method := range requestMethods {
-		itemResources[method] = make(restApiHandlerStore)
-		collectionResources[method] = make(restApiHandlerStore)
+	for _, contentType := range strings.Split(accept, ",") {
+		// TODO: Support proper ordering with q=
+		contentType = strings.Split(contentType, ";")[0]
+
+		if serializer, ok := api.serializers[contentType]; ok {
+			return serializer
+		}
 	}
 
-	api := &restApi{
-		prefix:              prefix,
-		itemResources:       itemResources,
-		collectionResources: collectionResources,
-	}
-
-	http.HandleFunc(api.prefix, api.onRequestReceived)
-
-	return api
+	return serializeToJSON
 }
 
 // Handle routing of requests to their resources
@@ -155,6 +163,8 @@ func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 
 	trunctedString := strings.TrimRight(r.RequestURI[len(api.prefix):], "/")
 	parts := strings.Split(trunctedString, "/")
+
+	serialize := api.getResponseSerializer(r)
 
 	var response interface{}
 	var err error
@@ -176,7 +186,7 @@ func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	output, err := json.Marshal(response)
+	output, err := serialize(response)
 
 	if err != nil {
 		// TODO: Handle this error case
