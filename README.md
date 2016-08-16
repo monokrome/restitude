@@ -2,6 +2,12 @@
 A tiny library for creating RESTful services in Go.
 
 
+## Installation
+
+```sh
+go get github.com/monokrome/restitude
+```
+
 ## Usage
 
 Here's an example of creating a simple API with a manually provided serializer
