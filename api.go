@@ -145,6 +145,7 @@ func (api *restApi) handleCollection(baseName string, r *http.Request) (interfac
 func (api *restApi) getResponseSerializer(r *http.Request) restSerializer {
 	accept := r.Header.Get("Accept")
 
+	// TODO: Don't use split. It's excessive here.
 	for _, contentType := range strings.Split(accept, ",") {
 		// TODO: Support proper ordering with q=
 		contentType = strings.Split(contentType, ";")[0]
