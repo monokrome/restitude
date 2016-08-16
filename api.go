@@ -24,10 +24,6 @@ type restApi struct {
 	collectionResources map[string]restApiHandlerStore
 }
 
-type CollectionResponse struct {
-	Objects interface{}
-}
-
 type ErrorResponse struct {
 	Message string
 }
@@ -178,9 +174,6 @@ func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 		err = errors.New("Support for generating schemas is not yet implemented.")
 	} else {
 		response, err = api.handleCollection(parts[0], r)
-		response = CollectionResponse{
-			Objects: response,
-		}
 	}
 
 	if err != nil {
