@@ -1,6 +1,7 @@
 package restitude
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -156,7 +157,7 @@ func (api *restApi) getResponseSerializer(r *http.Request) restSerializer {
 		}
 	}
 
-	return serializeToJSON
+	return json.Marshal
 }
 
 // Handle routing of requests to their resources
