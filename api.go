@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"reflect"
 	"strings"
 )
 
@@ -38,9 +39,23 @@ type restApi struct {
 	collectionResources map[string]restApiHandlerStore
 }
 
+// Get the API base name for the given resource
+func getBaseName(iface interface{}) string {
+	if resource, ok := iface.(resource); ok {
+		return resource.BaseName()
+	}
+
+	// If no BaseName is provided, guess based on the type's name
+	typeName := reflect.TypeOf(iface).Name()
+	if len(typeName) > 8 && typeName[len(typeName)-8:] == "Resource" {
+		typeName = typeName[:len(typeName)-8]
+	}
+	return strings.ToLower(typeName)
+}
+
 // Allows registering of resources to specific APIs
 func (api *restApi) RegisterResource(iface interface{}) {
-	baseName := strings.ToLower(iface.(resource).BaseName())
+	baseName := getBaseName(iface)
 
 	if handler, ok := iface.(deleteItemResource); ok {
 		api.itemResources["DELETE"][baseName] = handler.DeleteItem
