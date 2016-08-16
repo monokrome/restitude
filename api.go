@@ -14,14 +14,15 @@ const MatchingResourceNotFound = "No resource found matching the given request."
 
 var requestMethods = []string{"DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"}
 
-type restApiHandlerStore map[string]func(r *http.Request) (interface{}, error)
+type restApiItemHandlerStore map[string]func(identifier string, r *http.Request) (interface{}, error)
+type restApiCollectionHandlerStore map[string]func(r *http.Request) (interface{}, error)
 
 type restApi struct {
 	Prefix      string
 	Serializers map[string]restSerializer
 
-	itemResources       map[string]restApiHandlerStore
-	collectionResources map[string]restApiHandlerStore
+	itemResources       map[string]restApiItemHandlerStore
+	collectionResources map[string]restApiCollectionHandlerStore
 }
 
 type ErrorResponse struct {
@@ -45,12 +46,12 @@ func getBaseName(iface interface{}) string {
 func NewRestApi(prefix string) *restApi {
 	log.Print("Creating new REST API at ", prefix)
 
-	itemResources := make(map[string]restApiHandlerStore)
-	collectionResources := make(map[string]restApiHandlerStore)
+	itemResources := make(map[string]restApiItemHandlerStore)
+	collectionResources := make(map[string]restApiCollectionHandlerStore)
 
 	for _, method := range requestMethods {
-		itemResources[method] = make(restApiHandlerStore)
-		collectionResources[method] = make(restApiHandlerStore)
+		itemResources[method] = make(restApiItemHandlerStore)
+		collectionResources[method] = make(restApiCollectionHandlerStore)
 	}
 
 	api := &restApi{
@@ -118,10 +119,10 @@ func (api *restApi) RegisterResource(iface interface{}) {
 	}
 }
 
-func (api *restApi) handleItem(baseName string, r *http.Request) (interface{}, error) {
+func (api *restApi) handleItem(baseName string, identifier string, r *http.Request) (interface{}, error) {
 	if resources, ok := api.itemResources[r.Method]; ok {
 		if handler, ok := resources[baseName]; ok {
-			response, err := handler(r)
+			response, err := handler(identifier, r)
 			return response, err
 		}
 	}
@@ -161,7 +162,10 @@ func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 	log.Print("Received ", r.Method, " request at: ", r.RequestURI)
 
 	trunctedString := strings.TrimRight(r.RequestURI[len(api.Prefix):], "/")
+
+	// NOTE: Split/Join is excessive here and doesn't help performance.
 	parts := strings.Split(trunctedString, "/")
+	identifier := strings.Join(parts[:], "/")
 
 	serialize := api.getResponseSerializer(r)
 
@@ -169,7 +173,7 @@ func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	if len(parts) > 1 {
-		response, err = api.handleItem(parts[0], r)
+		response, err = api.handleItem(parts[0], identifier, r)
 	} else if parts[0] == "" {
 		err = errors.New("Support for generating schemas is not yet implemented.")
 	} else {

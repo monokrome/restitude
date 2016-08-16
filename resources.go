@@ -11,31 +11,31 @@ type resource interface {
 
 // Interface for resources which are able to work with individual entities
 type deleteItemResource interface {
-	DeleteItem(r *http.Request) (interface{}, error)
+	DeleteItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 type getItemResource interface {
-	GetItem(r *http.Request) (interface{}, error)
+	GetItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 type headItemResource interface {
-	HeadItem(r *http.Request) (interface{}, error)
+	HeadItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 type optionsItemResource interface {
-	OptionsItem(r *http.Request) (interface{}, error)
+	OptionsItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 type patchItemResource interface {
-	PatchItem(r *http.Request) (interface{}, error)
+	PatchItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 type postItemResource interface {
-	PostItem(r *http.Request) (interface{}, error)
+	PostItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 type putItemResource interface {
-	PutItem(r *http.Request) (interface{}, error)
+	PutItem(identifier string, r *http.Request) (interface{}, error)
 }
 
 // Interface for resources which are able to work with collections of entities
