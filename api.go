@@ -165,7 +165,7 @@ func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 
 	// NOTE: Split/Join is excessive here and doesn't help performance.
 	parts := strings.Split(trunctedString, "/")
-	identifier := strings.Join(parts[:], "/")
+	identifier := strings.Join(parts[1:], "/")
 
 	serialize := api.getResponseSerializer(r)
 
