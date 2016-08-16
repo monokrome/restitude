@@ -23,14 +23,6 @@ func serializeToResponse(w *http.ResponseWriter, v interface{}) []byte {
 	return jsonData
 }
 
-type restApiHandlerStore map[string]func(r *http.Request) (interface{}, error)
-
-type restApi struct {
-	prefix              string
-	itemResources       map[string]restApiHandlerStore
-	collectionResources map[string]restApiHandlerStore
-}
-
 type CollectionResponse struct {
 	Objects interface{}
 }
@@ -38,78 +30,12 @@ type CollectionResponse struct {
 type ErrorResponse struct {
 	Message string
 }
+type restApiHandlerStore map[string]func(r *http.Request) (interface{}, error)
 
-func NewRestApi(prefix string) *restApi {
-	log.Print("Creating new REST API at ", prefix)
-
-	itemResources := make(map[string]restApiHandlerStore)
-	collectionResources := make(map[string]restApiHandlerStore)
-
-	for _, method := range requestMethods {
-		itemResources[method] = make(restApiHandlerStore)
-		collectionResources[method] = make(restApiHandlerStore)
-	}
-
-	api := &restApi{
-		prefix:              prefix,
-		itemResources:       itemResources,
-		collectionResources: collectionResources,
-	}
-
-	http.HandleFunc(api.prefix, api.onRequestReceived)
-
-	return api
-}
-
-// Interface for getting the base path to a RESTful resource
-type resource interface {
-	BaseName() string
-}
-
-// Interface for resources which are able to work with individual entities
-type deleteItemResource interface {
-	DeleteItem(r *http.Request) (interface{}, error)
-}
-type getItemResource interface {
-	GetItem(r *http.Request) (interface{}, error)
-}
-type headItemResource interface {
-	HeadItem(r *http.Request) (interface{}, error)
-}
-type optionsItemResource interface {
-	OptionsItem(r *http.Request) (interface{}, error)
-}
-type patchItemResource interface {
-	PatchItem(r *http.Request) (interface{}, error)
-}
-type postItemResource interface {
-	PostItem(r *http.Request) (interface{}, error)
-}
-type putItemResource interface {
-	PutItem(r *http.Request) (interface{}, error)
-}
-
-// Interface for resources which are able to work with collections of entities
-type deleteCollectionResource interface {
-	DeleteCollection(r *http.Request) (interface{}, error)
-}
-type getCollectionResource interface {
-	GetCollection(r *http.Request) (interface{}, error)
-}
-type headCollectionResource interface {
-	HeadCollection(r *http.Request) (interface{}, error)
-}
-type optionsCollectionResource interface {
-	OptionsCollection(r *http.Request) (interface{}, error)
-}
-type patchCollectionResource interface {
-	PatchCollection(r *http.Request) (interface{}, error)
-}
-type postCollectionResource interface {
-	PostCollection(r *http.Request) (interface{}, error)
-}
-type putCollectionResource interface {
-	PutCollection(r *http.Request) (interface{}, error)
+type restApi struct {
+	prefix              string
+	itemResources       map[string]restApiHandlerStore
+	collectionResources map[string]restApiHandlerStore
 }
 
 // Allows registering of resources to specific APIs
@@ -185,6 +111,27 @@ func (api *restApi) handleCollection(baseName string, r *http.Request) (interfac
 	}
 
 	return nil, errors.New(MatchingResourceNotFound)
+}
+func NewRestApi(prefix string) *restApi {
+	log.Print("Creating new REST API at ", prefix)
+
+	itemResources := make(map[string]restApiHandlerStore)
+	collectionResources := make(map[string]restApiHandlerStore)
+
+	for _, method := range requestMethods {
+		itemResources[method] = make(restApiHandlerStore)
+		collectionResources[method] = make(restApiHandlerStore)
+	}
+
+	api := &restApi{
+		prefix:              prefix,
+		itemResources:       itemResources,
+		collectionResources: collectionResources,
+	}
+
+	http.HandleFunc(api.prefix, api.onRequestReceived)
+
+	return api
 }
 
 // Handle routing of requests to their resources
