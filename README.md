@@ -1,3 +1,19 @@
+# restitude
+A tiny library for creating RESTful services in Go.
+
+
+## Installation
+
+```sh
+go get github.com/monokrome/restitude
+```
+
+## Usage
+
+Here's an example of creating a simple API with a manually provided serializer
+for msgpack support:
+
+```go
 package main
 
 import (
@@ -33,3 +49,4 @@ func main() {
 	log.Print("Example service at http://", bindAddress, "/api/example/")
 	log.Fatalln(http.ListenAndServe(bindAddress, nil))
 }
+```
