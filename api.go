@@ -16,10 +16,11 @@ var requestMethods = []string{"DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST
 type restApiHandlerStore map[string]func(r *http.Request) (interface{}, error)
 
 type restApi struct {
-	prefix              string
+	Prefix      string
+	Serializers map[string]restSerializer
+
 	itemResources       map[string]restApiHandlerStore
 	collectionResources map[string]restApiHandlerStore
-	serializers         map[string]restSerializer
 }
 
 type CollectionResponse struct {
@@ -56,13 +57,13 @@ func NewRestApi(prefix string) *restApi {
 	}
 
 	api := &restApi{
-		prefix:              prefix,
+		Prefix:              prefix,
+		Serializers:         getDefaultSerializers(),
 		itemResources:       itemResources,
 		collectionResources: collectionResources,
-		serializers:         getDefaultSerializers(),
 	}
 
-	http.HandleFunc(api.prefix, api.onRequestReceived)
+	http.HandleFunc(api.Prefix, api.onRequestReceived)
 
 	return api
 }
@@ -150,7 +151,7 @@ func (api *restApi) getResponseSerializer(r *http.Request) restSerializer {
 		// TODO: Support proper ordering with q=
 		contentType = strings.Split(contentType, ";")[0]
 
-		if serializer, ok := api.serializers[contentType]; ok {
+		if serializer, ok := api.Serializers[contentType]; ok {
 			return serializer
 		}
 	}
@@ -162,7 +163,7 @@ func (api *restApi) getResponseSerializer(r *http.Request) restSerializer {
 func (api *restApi) onRequestReceived(w http.ResponseWriter, r *http.Request) {
 	log.Print("Received ", r.Method, " request at: ", r.RequestURI)
 
-	trunctedString := strings.TrimRight(r.RequestURI[len(api.prefix):], "/")
+	trunctedString := strings.TrimRight(r.RequestURI[len(api.Prefix):], "/")
 	parts := strings.Split(trunctedString, "/")
 
 	serialize := api.getResponseSerializer(r)
